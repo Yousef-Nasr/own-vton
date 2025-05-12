@@ -111,8 +111,8 @@ class EfficientCatVTON:
                cloth_image,
                mask_image=None,
                cloth_type="upper",
-               num_inference_steps=30,
-               guidance_scale=2.5,
+               num_inference_steps=50,
+               guidance_scale=3,
                seed=42,
                output_dir="outputs"):
         """
