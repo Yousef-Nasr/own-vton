@@ -1,14 +1,20 @@
 import torch
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 from PIL import Image
 import io
 import uvicorn
 import requests
 from pyngrok import ngrok
 from catvton import EfficientCatVTON  # Make sure this is correct
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+import os
+from typing import Optional
 
+# Initialize FastAPI app
 app = FastAPI()
 
 # Allow all CORS (can be tightened for production)
@@ -20,49 +26,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configure Cloudinary - replace with your actual credentials
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "your_cloud_name"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY", "your_api_key"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret"),
+)
+
 # Initialize your VTON model
 virtual_tryon = EfficientCatVTON(device="cuda")
 
-@app.get("/try-on")
+@app.post("/try-on")
 async def try_on(
-    person_url: str = Query(..., description="URL of the person image"),
-    cloth_url: str = Query(..., description="URL of the cloth image"),
-    cloth_type: str = Query("upper", description="Type of cloth: upper or lower"),
-    num_inference_steps: int = Query(50, description="Number of inference steps"),
+    person_image: UploadFile = File(...),
+    cloth_url: str = Form(...),
+    cloth_type: str = Form("upper"),
+    num_inference_steps: int = Form(50),
+    folder: Optional[str] = Form("vton_results")
 ):
     try:
-        # Download person image
-        person_response = requests.get(person_url)
-        person_response.raise_for_status()
-        person_image = Image.open(io.BytesIO(person_response.content)).convert("RGB")
-
-        # Download cloth image
+        # Process person image from uploaded file
+        person_content = await person_image.read()
+        person_img = Image.open(io.BytesIO(person_content)).convert("RGB")
+        
+        # Download cloth image from URL
         cloth_response = requests.get(cloth_url)
         cloth_response.raise_for_status()
-        cloth_image = Image.open(io.BytesIO(cloth_response.content)).convert("RGB")
-
+        cloth_img = Image.open(io.BytesIO(cloth_response.content)).convert("RGB")
+        
         # Perform virtual try-on
         result_image = virtual_tryon.try_on(
-            person_image, cloth_image,
+            person_img, cloth_img,
             cloth_type=cloth_type,
             num_inference_steps=num_inference_steps
         )
-
-        # Convert result to bytes
+        
+        # Convert result to bytes for Cloudinary upload
         img_io = io.BytesIO()
         result_image.save(img_io, format="PNG")
         img_io.seek(0)
-        return StreamingResponse(img_io, media_type="image/png")
-
+        
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            img_io,
+            folder=folder,
+            resource_type="image"
+        )
+        
+        # Return the Cloudinary URL and other details
+        return {
+            "success": True,
+            "image_url": upload_result["secure_url"],
+            "public_id": upload_result["public_id"],
+            "format": upload_result["format"],
+            "width": upload_result["width"],
+            "height": upload_result["height"]
+        }
+        
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     # Start ngrok tunnel
     public_url = ngrok.connect(8000, domain="seriously-moved-husky.ngrok-free.app")
     print(f"Public URL: {public_url}")
-
+    
     import nest_asyncio
     nest_asyncio.apply()
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
