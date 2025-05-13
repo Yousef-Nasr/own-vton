@@ -13,6 +13,7 @@ import cloudinary.uploader
 import cloudinary.api
 import os
 from typing import Optional
+import env
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -69,6 +70,8 @@ async def try_on(
         # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(
             img_io,
+            public_id = "try_on_glamora",
+            overwrite = True, 
             folder=folder,
             resource_type="image"
         )
