@@ -30,7 +30,7 @@ async def try_on(person: UploadFile = File(...), cloth: UploadFile = File(...), 
         cloth_image = Image.open(io.BytesIO(await cloth.read())).convert("RGB")
         
         # Perform virtual try-on
-        result_image = virtual_tryon.try_on(person_image, cloth_image, cloth_type=cloth_type)
+        result_image = virtual_tryon.try_on(person_image, cloth_image, cloth_type=cloth_type, num_inference_steps=50)
         
         # Convert result image to bytes
         img_io = io.BytesIO()
