@@ -28,9 +28,9 @@ app.add_middleware(
 
 # Configure Cloudinary - replace with your actual credentials
 cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "your_cloud_name"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY", "your_api_key"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret"),
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME", "djgq0eerq"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY", "673215842768325"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET", "5NJj8jzUQCinG4IL01V75NT3z9s"),
 )
 
 # Initialize your VTON model
