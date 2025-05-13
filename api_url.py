@@ -13,7 +13,6 @@ import cloudinary.uploader
 import cloudinary.api
 import os
 from typing import Optional
-import env
 
 # Initialize FastAPI app
 app = FastAPI()
